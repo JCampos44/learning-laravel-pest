@@ -7,8 +7,8 @@ use App\Http\Requests\V1\LoginRequest;
 use App\Http\Requests\V1\RegisterRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -114,7 +114,21 @@ class AuthController extends Controller
             ->setStatusCode(200);
     }
 
-    public function logout(Request $request): JsonResponse
+    /**
+     * Revoke the current personal access token.
+     *
+     * Revokes the access token associated with the current request.
+     *
+     * @group Authentication
+     *
+     * @header Authorization string required Bearer token. Example: "Bearer {token}"
+     *
+     * @response 204
+     * @response 401 {
+     *  "message": "Not authenticated."
+     * }
+     */
+    public function logout(Request $request)
     {
         $user = $request->user();
 
@@ -128,6 +142,6 @@ class AuthController extends Controller
             $token->delete();
         }
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        return response()->noContent();
     }
 }
