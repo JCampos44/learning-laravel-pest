@@ -7,6 +7,7 @@ use App\Http\Requests\V1\LoginRequest;
 use App\Http\Requests\V1\RegisterRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -88,7 +89,6 @@ class AuthController extends Controller
      *    "token_type": "Bearer"
      *  }
      * }
-     *
      * @response 401 {
      *  "message": "The provided credentials are incorrect."
      * }
@@ -112,5 +112,22 @@ class AuthController extends Controller
             ->additional(['meta' => ['access_token' => $token, 'token_type' => 'Bearer']])
             ->response()
             ->setStatusCode(200);
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Not authenticated.'], 401);
+        }
+
+        $token = $user->currentAccessToken();
+
+        if ($token) {
+            $token->delete();
+        }
+
+        return response()->json(['message' => 'Logged out successfully.']);
     }
 }
