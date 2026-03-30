@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 
 uses(LazilyRefreshDatabase::class);
 
