@@ -10,6 +10,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use App\Mail\WelcomeMail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -52,6 +55,12 @@ class AuthController extends Controller
 
         $device = $data['device_name'] ?? 'api-token';
         $token = $user->createToken($device, ['*'])->plainTextToken;
+
+        try {
+            Mail::to($user->email)->queue(new WelcomeMail($user));
+        } catch (\Throwable $e) {
+            Log::error('Failed to queue welcome email for user '.$user->id.': '.$e->getMessage());
+        }
 
         return (new UserResource($user))
             ->additional([
