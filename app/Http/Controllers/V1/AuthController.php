@@ -15,19 +15,18 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     /**
-     * Register a new user and send the verification email
+     * Register a new user and send an email verification notification.
      *
-     * Crea un nuevo usuario validando la petición con `RegisterRequest`. Si se
-     * proporciona `device_name` se valida pero no se usa. Laravel enviará la
-     * notificación nativa de verificación de correo al registrar el usuario.
+     * Creates a new user using the validated `RegisterRequest` payload and
+     * dispatches Laravel's native email verification notification after the
+     * account is successfully created.
      *
      * @group Authentication
      *
      * @bodyParam name string required The user's full name. Example: "Juan Pérez"
-     * @bodyParam email string required The user's email. Example: "user@example.com"
-     * @bodyParam password string required Minimum 8 characters.
-     * @bodyParam password_confirmation string required Must match `password`.
-     * @bodyParam device_name string|null Optional device name used to name the token. Example: "iPhone 12"
+     * @bodyParam email string required The user's email address. Example: "user@example.com"
+     * @bodyParam password string required The user's password. Minimum 8 characters. Example: "password123"
+     * @bodyParam password_confirmation string required The password confirmation. Must match `password`. Example: "password123"
      *
      * @response 201 {
      *  "data": {
@@ -36,7 +35,7 @@ class AuthController extends Controller
      *    "email": "user@example.com",
      *    "created_at": "2026-03-27T12:00:00.000000Z",
      *    "updated_at": "2026-03-27T12:00:00.000000Z"
-     *  },
+     *  }
      * }
      *
      * @unauthenticated
@@ -44,8 +43,6 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         $data = $request->validated();
-
-        unset($data['device_name']);
 
         $user = User::create($data);
 
