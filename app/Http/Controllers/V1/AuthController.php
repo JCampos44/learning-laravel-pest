@@ -7,21 +7,19 @@ use App\Http\Requests\V1\LoginRequest;
 use App\Http\Requests\V1\RegisterRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
-use App\Mail\WelcomeMail;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     /**
-     * Register a new user and optionally issue an API token
+     * Register a new user and send the verification email
      *
      * Crea un nuevo usuario validando la petición con `RegisterRequest`. Si se
-     * proporciona `device_name` se crea un personal access token y se devuelve
-     * junto con el `UserResource`. El token en texto plano se muestra sólo una vez.
+     * proporciona `device_name` se valida pero no se usa. Laravel enviará la
+     * notificación nativa de verificación de correo al registrar el usuario.
      *
      * @group Authentication
      *
@@ -39,10 +37,6 @@ class AuthController extends Controller
      *    "created_at": "2026-03-27T12:00:00.000000Z",
      *    "updated_at": "2026-03-27T12:00:00.000000Z"
      *  },
-     *  "meta": {
-     *    "access_token": "plain-text-token",
-     *    "token_type": "Bearer"
-     *  }
      * }
      *
      * @unauthenticated
@@ -50,25 +44,18 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         $data = $request->validated();
-        $data['password'] = bcrypt($data['password']);
+
+        unset($data['device_name']);
+
         $user = User::create($data);
 
-        $device = $data['device_name'] ?? 'api-token';
-        $token = $user->createToken($device, ['*'])->plainTextToken;
-
         try {
-            Mail::to($user->email)->queue(new WelcomeMail($user));
+            event(new Registered($user));
         } catch (\Throwable $e) {
-            Log::error('Failed to queue welcome email for user '.$user->id.': '.$e->getMessage());
+            Log::error('Failed to send verification email for user '.$user->id.': '.$e->getMessage());
         }
 
         return (new UserResource($user))
-            ->additional([
-                'meta' => [
-                    'access_token' => $token,
-                    'token_type' => 'Bearer',
-                ],
-            ])
             ->response()
             ->setStatusCode(201);
     }
@@ -78,6 +65,7 @@ class AuthController extends Controller
      *
      * Authenticate the user with email and password and return a `UserResource`
      * plus a one-time plain-text personal access token. The token is shown only once.
+     * The user must have a verified email address before a token is issued.
      *
      * @group Authentication
      *
@@ -101,6 +89,9 @@ class AuthController extends Controller
      * @response 401 {
      *  "message": "The provided credentials are incorrect."
      * }
+     * @response 403 {
+     *  "message": "Please verify your email address."
+     * }
      *
      * @unauthenticated
      */
@@ -112,6 +103,10 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'The provided credentials are incorrect.'], 401);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Please verify your email address.'], 403);
         }
 
         $device = $data['device_name'] ?? 'api-token';

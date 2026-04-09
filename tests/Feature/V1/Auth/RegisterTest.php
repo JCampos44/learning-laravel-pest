@@ -1,17 +1,20 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 
 uses(LazilyRefreshDatabase::class);
 
-it('registers a new user and returns an access token', function () {
+it('registers a new user and sends a verification email', function () {
+    Notification::fake();
+
     $payload = [
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password123',
         'password_confirmation' => 'password123',
-        'device_name' => 'phpunit',
     ];
 
     $response = $this->postJson('/api/v1/register', $payload);
@@ -19,13 +22,15 @@ it('registers a new user and returns an access token', function () {
     $response->assertCreated()
         ->assertJsonStructure([
             'data' => ['id', 'name', 'email', 'created_at', 'updated_at'],
-            'meta' => ['access_token', 'token_type'],
         ]);
 
     $user = User::where('email', $payload['email'])->first();
 
     $this->assertModelExists($user);
-    expect($response->json('meta.token_type'))->toBe('Bearer');
+    Notification::assertSentTo($user, VerifyEmail::class);
+
+    $response->assertJsonMissingPath('meta');
+    expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
 it('returns 422 for missing or invalid fields (dataset)', function (array $payload, array $expected) {

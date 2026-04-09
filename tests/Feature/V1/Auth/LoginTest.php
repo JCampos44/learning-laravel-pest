@@ -48,6 +48,19 @@ it('returns 401 for non-existent email', function () {
         ->assertJson(['message' => 'The provided credentials are incorrect.']);
 });
 
+it('returns 403 when the user has not verified their email', function () {
+    $user = User::factory()->unverified()->create([
+        'password' => bcrypt('password123'),
+    ]);
+
+    $this->postJson('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'password123',
+    ])
+        ->assertForbidden()
+        ->assertJson(['message' => 'Please verify your email address.']);
+});
+
 it('returns 422 for missing or invalid fields (dataset)', function (array $payload, array $expected) {
     $this->postJson('/api/v1/login', $payload)
         ->assertStatus(422)
