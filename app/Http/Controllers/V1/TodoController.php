@@ -9,6 +9,7 @@ use App\Http\Resources\V1\TodoResource;
 use App\Models\Todo;
 use Illuminate\Http\Request;
 use Knuckles\Scribe\Attributes\Authenticated;
+use Knuckles\Scribe\Attributes\BodyParam;
 use Knuckles\Scribe\Attributes\Group;
 use Knuckles\Scribe\Attributes\Header;
 use Knuckles\Scribe\Attributes\QueryParam;
@@ -100,42 +101,35 @@ class TodoController extends Controller
      *
      * Stores a new todo owned by the currently authenticated user. If `status`
      * is not provided, the todo is created with the default `pending` status.
-     *
-     * @group Todos
-     *
-     * @header Authorization string required Bearer token. Example: "Bearer {token}"
-     *
-     * @bodyParam title string required The todo title. Maximum 255 characters. Example: "Buy groceries"
-     * @bodyParam description string nullable Optional details about the todo. Example: "Milk, bread, eggs, and coffee"
-     * @bodyParam status string optional The todo status. Allowed values: `pending`, `completed`. Defaults to `pending`. Example: "pending"
-     * @bodyParam completed_at string nullable Completion date in a valid datetime format. Example: "2026-04-10 15:30:00"
-     *
-     * @response 201 {
-     *  "data": {
-     *    "id": 1,
-     *    "user_id": 1,
-     *    "title": "Buy groceries",
-     *    "description": "Milk, bread, eggs, and coffee",
-     *    "status": "pending",
-     *    "completed_at": null,
-     *    "created_at": "2026-04-10T15:30:00.000000Z",
-     *    "updated_at": "2026-04-10T15:30:00.000000Z"
-     *  }
-     * }
-     * @response 401 {
-     *  "message": "Unauthenticated."
-     * }
-     * @response 422 {
-     *  "message": "The given data was invalid.",
-     *  "errors": {
-     *    "title": [
-     *      "The title field is required."
-     *    ]
-     *  }
-     * }
-     *
-     * @authenticated
      */
+    #[Group('Todos')]
+    #[Authenticated]
+    #[Header('Authorization', 'Bearer {token}')]
+    #[BodyParam('title', 'string', 'The todo title. Maximum 255 characters.', true, 'Buy groceries')]
+    #[BodyParam('description', 'string', 'Optional details about the todo.', false, 'Milk, bread, eggs, and coffee', nullable: true)]
+    #[BodyParam('status', 'string', 'The todo status. Defaults to `pending`.', false, TodoStatus::Pending->value, enum: TodoStatus::class, nullable: true)]
+    #[BodyParam('completed_at', 'string', 'Completion date in a valid datetime format.', false, '2026-04-10 15:30:00', nullable: true)]
+    #[Response([
+        'data' => [
+            'id' => 1,
+            'user_id' => 1,
+            'title' => 'Buy groceries',
+            'description' => 'Milk, bread, eggs, and coffee',
+            'status' => 'pending',
+            'completed_at' => null,
+            'created_at' => '2026-04-10T15:30:00.000000Z',
+            'updated_at' => '2026-04-10T15:30:00.000000Z',
+        ],
+    ], status: 201)]
+    #[Response(['message' => 'Unauthenticated.'], status: 401)]
+    #[Response([
+        'message' => 'The given data was invalid.',
+        'errors' => [
+            'title' => [
+                'The title field is required.',
+            ],
+        ],
+    ], status: 422)]
     public function store(CreateTodoRequest $request)
     {
         $validated = $request->validated();
