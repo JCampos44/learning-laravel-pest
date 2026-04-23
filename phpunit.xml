@@ -14,6 +14,9 @@
         <testsuite name="Auth">
             <directory>tests/Feature/V1/Auth</directory>
         </testsuite>
+        <testsuite name="Todo">
+            <directory>tests/Feature/V1/Todo</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
